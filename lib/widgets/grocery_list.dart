@@ -16,6 +16,7 @@ class GroceryList extends StatefulWidget {
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
   var _screenLoading = true;
+  String? _err;
 
   @override
   void initState() {
@@ -27,6 +28,11 @@ class _GroceryListState extends State<GroceryList> {
     final url = Uri.https(
         'markit-list-default-rtdb.firebaseio.com', 'grocery-list.json');
     final res = await http.get(url);
+    if (res.statusCode >= 400) {
+      setState(() {
+        _err = 'failed to load data please try again';
+      });
+    }
     final Map<String, dynamic> listItems = json.decode(res.body);
     final List<GroceryItem> loadList = [];
     for (final item in listItems.entries) {
@@ -109,6 +115,16 @@ class _GroceryListState extends State<GroceryList> {
         ),
       );
     }
+    if (_err != null) {
+      screenContent = Center(
+        child: Text(
+          _err!,
+          style: Theme.of(context).textTheme.displayLarge,
+          textAlign: TextAlign.center,
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('My Groceries'),
