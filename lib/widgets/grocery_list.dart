@@ -25,35 +25,46 @@ class _GroceryListState extends State<GroceryList> {
   }
 
   void _loadList() async {
-    final url = Uri.https(
-        'markit-list-default-rtdb.firebaseio.com', 'grocery-list.json');
-    final res = await http.get(url);
-    if (res.statusCode >= 400) {
+    try {
+      final url = Uri.https(
+          'markit-list-default-rtdb.firebaseio.com', 'grocery-list.json');
+      final res = await http.get(url);
+      if (res.statusCode >= 400) {
+        setState(() {
+          _err = 'failed to load data please try again';
+        });
+      }
+      if (res.body == 'null') {
+        setState(() {
+          _screenLoading = false;
+        });
+        return;
+      }
+      final Map<String, dynamic> listItems = json.decode(res.body);
+      final List<GroceryItem> loadList = [];
+      for (final item in listItems.entries) {
+        final category = categories.entries
+            .firstWhere(
+                (catItem) => catItem.value.title == item.value['category'])
+            .value;
+        loadList.add(
+          GroceryItem(
+            category: category,
+            id: item.key,
+            name: item.value['name'],
+            quantity: item.value['quantity'],
+          ),
+        );
+      }
       setState(() {
-        _err = 'failed to load data please try again';
+        _groceryItems = loadList;
+        _screenLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _err = 'Something went wrong, please try again later.';
       });
     }
-    final Map<String, dynamic> listItems = json.decode(res.body);
-    final List<GroceryItem> loadList = [];
-    for (final item in listItems.entries) {
-      final category = categories.entries
-          .firstWhere(
-              (catItem) => catItem.value.title == item.value['category'])
-          .value;
-      loadList.add(
-        GroceryItem(
-          category: category,
-          id: item.key,
-          name: item.value['name'],
-          quantity: item.value['quantity'],
-        ),
-      );
-    }
-    setState(() {
-      _groceryItems = loadList;
-      _screenLoading = false;
-    });
-    // print(res.body);
   }
 
   void _addItem() async {
@@ -78,7 +89,7 @@ class _GroceryListState extends State<GroceryList> {
       _groceryItems.removeAt(index);
     });
     final url = Uri.https('markit-list-default-rtdb.firebaseio.com',
-        'grocery-list/${_groceryItems[index].id}.json');
+        'grocery-list/${removedItem.id}.json');
     final res = await http.delete(url);
     if (res.statusCode >= 400) {
       setState(() {
@@ -90,7 +101,7 @@ class _GroceryListState extends State<GroceryList> {
         showDialog(
             context: context,
             builder: (BuildContext context) {
-              return  AlertDialog(
+              return AlertDialog(
                 title: const Text('Error Deleting Item'),
                 content: const Text('Failed to delete item. Please try again.'),
                 actions: [
@@ -101,6 +112,16 @@ class _GroceryListState extends State<GroceryList> {
                 ],
               );
             });
+      }
+    } else {
+      if (!context.mounted) {
+        return;
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Item removed from the list'),
+          ),
+        );
       }
     }
   }
