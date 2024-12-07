@@ -21,9 +21,13 @@ class _NewItemState extends State<NewItem> {
   var _enteredName = '';
   var _enteredQuantity = 1;
   Category _selectedCategory = categories[Categories.vegetables]!;
+  var _sending = false;
   void _saveItem() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+      setState(() {
+        _sending = true;
+      });
       final url = Uri.https(
           'markit-list-default-rtdb.firebaseio.com', 'grocery-list.json');
       final res = await http.post(
@@ -149,14 +153,22 @@ class _NewItemState extends State<NewItem> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () {
-                      _formKey.currentState!.reset();
-                    },
+                    onPressed: _sending
+                        ? null
+                        : () {
+                            _formKey.currentState!.reset();
+                          },
                     child: const Text('Reset'),
                   ),
                   ElevatedButton(
-                    onPressed: _saveItem,
-                    child: const Text('Add to list'),
+                    onPressed: _sending ? null : _saveItem,
+                    child: _sending
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(),
+                          )
+                        : const Text('Add to list'),
                   )
                 ],
               ),
