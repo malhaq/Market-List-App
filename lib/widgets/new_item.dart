@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:market_list/data/categories.dart';
 import 'package:market_list/models/category.dart';
+// import 'package:market_list/models/grocery_items.dart';
+import 'package:http/http.dart' as http;
 import 'package:market_list/models/grocery_items.dart';
 
 class NewItem extends StatefulWidget {
@@ -17,14 +21,37 @@ class _NewItemState extends State<NewItem> {
   var _enteredName = '';
   var _enteredQuantity = 1;
   Category _selectedCategory = categories[Categories.vegetables]!;
-  void _saveItem() {
+  void _saveItem() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      Navigator.of(context).pop(GroceryItem(
-          category: _selectedCategory,
-          id: DateTime.now().toString(),
-          name: _enteredName,
-          quantity: _enteredQuantity));
+      final url = Uri.https(
+          'markit-list-default-rtdb.firebaseio.com', 'grocery-list.json');
+      final res = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: json.encode(
+          {
+            'name': _enteredName,
+            'quantity': _enteredQuantity,
+            'category': _selectedCategory.title,
+          },
+        ),
+      );
+
+      final resData = json.decode(res.body);
+
+      if (!context.mounted) {
+        return;
+      }
+      Navigator.of(context).pop(
+        GroceryItem(
+            category: _selectedCategory,
+            id: resData['name'],
+            name: _enteredName,
+            quantity: _enteredQuantity),
+      );
     }
   }
 
