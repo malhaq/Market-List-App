@@ -72,10 +72,37 @@ class _GroceryListState extends State<GroceryList> {
     });
   }
 
-  void _deleteItem(int index) {
+  void _deleteItem(int index) async {
+    final removedItem = _groceryItems[index];
     setState(() {
       _groceryItems.removeAt(index);
     });
+    final url = Uri.https('markit-list-default-rtdb.firebaseio.com',
+        'grocery-list/${_groceryItems[index].id}.json');
+    final res = await http.delete(url);
+    if (res.statusCode >= 400) {
+      setState(() {
+        _groceryItems.insert(index, removedItem);
+      });
+      if (!context.mounted) {
+        return;
+      } else {
+        showDialog(
+            context: context,
+            builder: (BuildContext context) {
+              return  AlertDialog(
+                title: const Text('Error Deleting Item'),
+                content: const Text('Failed to delete item. Please try again.'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Ok'),
+                  ),
+                ],
+              );
+            });
+      }
+    }
   }
 
   @override
